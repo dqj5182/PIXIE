@@ -15,6 +15,7 @@ from pixielib.utils import util
 from pixielib.utils.config import cfg as pixie_cfg
 from pixielib.utils.tensor_cropper import transform_points
 
+
 def main(args):
     savefolder = args.savefolder
     device = args.device
@@ -30,7 +31,7 @@ def main(args):
     # load test images 
     testdata = TestData(args.inputpath, iscrop=args.iscrop, body_detector='rcnn')
 
-    #-- run PIXIE
+    # run PIXIE
     pixie_cfg.model.use_tex = args.useTex
     pixie = PIXIE(config = pixie_cfg, device=device)
     visualizer = Visualizer(render_size=args.render_size, config = pixie_cfg, device=device, rasterizer_type=args.rasterizer_type)
@@ -42,21 +43,16 @@ def main(args):
         use_deca = True
     else:
         use_deca = False
-    
     for i, batch in enumerate(tqdm(testdata, dynamic_ncols=True)):
         util.move_dict_to_device(batch, device)
         batch['image'] = batch['image'].unsqueeze(0)
         batch['image_hd'] = batch['image_hd'].unsqueeze(0)
         name = batch['name']
-        # print(name)
-        # frame_id = int(name.split('frame')[-1])
-        # name = f'{frame_id:05}'
 
         data = {
             'body': batch
         }
         param_dict = pixie.encode(data, threthold=True, keep_local=True, copy_and_paste=False)
-        # param_dict = pixie.encode(data, threthold=True, keep_local=True, copy_and_paste=True)
         # only use body params to get smplx output. TODO: we can also show the results of cropped head/hands
         moderator_weight = param_dict['moderator_weight']
         codedict = param_dict['body']
@@ -64,18 +60,20 @@ def main(args):
         opdict['albedo'] = visualizer.tex_flame2smplx(opdict['albedo'])
         if args.saveObj or args.saveParam or args.savePred or args.saveImages or args.deca_path is not None:
             os.makedirs(os.path.join(savefolder, name), exist_ok=True)
-        # -- save results
+        # Save results
         # run deca if deca is available and moderator thinks information from face crops is reliable
-        if args.deca_path is not None and param_dict['moderator_weight']['head'][0,1].item()>0.6:
-            cropped_face_savepath = os.path.join(savefolder, name, f'{name}_facecrop.jpg')
-            cv2.imwrite(cropped_face_savepath, util.tensor2image(data['body']['head_image'][0]))
-            _, deca_opdict, _ = deca.run(cropped_face_savepath)
-            flame_displacement_map = deca_opdict['displacement_map']
-            opdict['displacement_map'] = visualizer.tex_flame2smplx(flame_displacement_map)
-        if args.lightTex:
-            visualizer.light_albedo(opdict)
-        if args.extractTex:
-            visualizer.extract_texture(opdict, data['body']['image_hd'])
+        # if args.deca_path is not None and param_dict['moderator_weight']['head'][0,1].item()>0.6:
+        #     cropped_face_savepath = os.path.join(savefolder, name, f'{name}_facecrop.jpg')
+        #     import pdb; pdb.set_trace()
+        #     cv2.imwrite(cropped_face_savepath, util.tensor2image(data['body']['head_image'][0]))
+        #     _, deca_opdict, _ = deca.run(cropped_face_savepath)
+        #     flame_displacement_map = deca_opdict['displacement_map']
+        #     opdict['displacement_map'] = visualizer.tex_flame2smplx(flame_displacement_map)
+        # if args.lightTex:
+        #     visualizer.light_albedo(opdict)
+        # if args.extractTex:
+        #     import pdb; pdb.set_trace()
+        #     visualizer.extract_texture(opdict, data['body']['image_hd'])
         if args.reproject_mesh and args.rasterizer_type=='standard':
             ## whether to reproject mesh to original image space
             tform = batch['tform'][None, ...]
@@ -91,25 +89,21 @@ def main(args):
                 visdict['head'] = data['body']['head_image']
                 visdict['left_hand'] = data['body']['left_hand_image'] # should be flipped
                 visdict['right_hand'] = data['body']['right_hand_image']
-            cv2.imwrite(os.path.join(savefolder, f'{name}_vis.jpg'), visualizer.visualize_grid(visdict, size=args.render_size))
-            # print(os.path.join(savefolder, f'{name}_vis.jpg'))
-            # import ipdb; ipdb.set_trace()
-            # exit()
-        if args.saveGif:
-            visualizer.rotate_results(opdict, visdict=visdict, savepath=os.path.join(savefolder, f'{name}_vis.gif'))
+            cv2.imwrite(os.path.join(savefolder, name, f'vis_mesh_out.jpg'), visualizer.visualize_grid(visdict, size=args.render_size))
+        # if args.saveGif:
+        #     import pdb; pdb.set_trace()
+        #     visualizer.rotate_results(opdict, visdict=visdict, savepath=os.path.join(savefolder, f'{name}_vis.gif'))
         if args.saveObj:
-            visualizer.save_obj(os.path.join(savefolder, name, f'{name}.obj'), opdict)
+            visualizer.save_obj(os.path.join(savefolder, name, f'mesh_out.obj'), opdict)
         if args.saveParam:
             codedict['bbox'] = batch['bbox']
-            util.save_pkl(os.path.join(savefolder, name, f'{name}_param.pkl'), codedict)
-            np.savetxt(os.path.join(savefolder, name, f'{name}_bbox.txt'), batch['bbox'].squeeze())
+            util.save_pkl(os.path.join(savefolder, name, f'smpl_param_out.pkl'), codedict)
+            np.savetxt(os.path.join(savefolder, name, f'bbox.txt'), batch['bbox'].squeeze())
         if args.savePred:
-            util.save_pkl(os.path.join(savefolder, name, f'{name}_prediction.pkl'), opdict) 
+            util.save_pkl(os.path.join(savefolder, name, f'pred_out.pkl'), opdict) 
         if args.saveImages:
             for vis_name in visdict.keys():
                 cv2.imwrite(os.path.join(savefolder, name, f'{name}_{vis_name}.jpg'), util.tensor2image(visdict[vis_name][0]))
-                       
-    print(f'-- please check the results in {savefolder}')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PIXIE')

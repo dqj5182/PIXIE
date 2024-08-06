@@ -425,7 +425,7 @@ def write_obj(obj_name,
                         (out_normal_map * 255).astype(np.uint8)[:, :, ::-1]
                     )
 
-            cv2.imwrite(texture_name, texture)
+            # cv2.imwrite(texture_name, texture)
 
 
 def save_pkl(savepath, params, ind=0):

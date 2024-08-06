@@ -8,9 +8,14 @@ cd PIXIE
 
 #### Requirements
   * Python 3.7 (numpy, skimage, scipy, opencv, kornia)  
+    ```bash
+    conda create -n pixie python=3.9
+    conda activate pixie
+    ```
   * PyTorch >= 1.6 
     You can run 
     ```bash
+    conda install pytorch==1.10.1 torchvision==0.11.2 torchaudio==0.10.1 cudatoolkit=10.2 -c pytorch
     pip install -r requirements.txt
     ```
       Or create a separate virtual environment by running:  

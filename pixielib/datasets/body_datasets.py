@@ -82,7 +82,7 @@ class TestData(Dataset):
     def __getitem__(self, index):
         imagepath = self.imagepath_list[index]
         imagename = imagepath.split('/')[-1].split('.')[0]
-        image = imread(imagepath)[:,:,:3]/255.
+        image = cv2.imread(imagepath)[..., ::-1][:,:,:3]/255.
         h, w, _ = image.shape
 
         image_tensor = torch.tensor(image.transpose(2,0,1), dtype=torch.float32)[None, ...]
