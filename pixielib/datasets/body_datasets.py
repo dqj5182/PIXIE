@@ -87,12 +87,14 @@ class TestData(Dataset):
 
         image_tensor = torch.tensor(image.transpose(2,0,1), dtype=torch.float32)[None, ...]
         if self.iscrop:
-            bbox = self.detector.run(image_tensor)
-            if bbox is None:
+            try:
+                bbox = self.detector.run(image_tensor)
+                left = bbox[0]; right = bbox[2]; top = bbox[1]; bottom = bbox[3]
+            except:
                 print('no person detected! run original image')
                 left = 0; right = w-1; top=0; bottom=h-1
-            else:
-                left = bbox[0]; right = bbox[2]; top = bbox[1]; bottom = bbox[3]
+                bbox = np.array([left, top, right, bottom], dtype=np.float32)
+
             old_size = max(right - left, bottom - top)
             center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0])
             size = int(old_size*self.scale)
